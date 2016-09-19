@@ -7,8 +7,17 @@ class MessagesController < ApplicationController
 
   def create
     message = current_user.messages.build(message_params)
+    adminUser = User.find(1)
     if message.save
-      redirect_to messages_url
+      # redirect_to messages_url
+
+      # ActionCable.server.broadcast 'room_channel', message: render_message(message)
+
+      message.mentions.each do |mention|
+        ActionCable.server.broadcast "room_channel_user_#{mention.id}",
+                                     mention: true, user: User.find(mention.id).username
+      end
+      head :ok
     else
       render 'index'
     end
@@ -24,4 +33,7 @@ class MessagesController < ApplicationController
     def message_params
       params.require(:message).permit(:content)
     end
+  def render_message(message)
+    render(partial: 'message', locals: { message: message })
+  end
 end
